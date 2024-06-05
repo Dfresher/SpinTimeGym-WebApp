@@ -1,0 +1,1 @@
+Loosely based on the wonderful tutorial by Programming with Mosh about React, this repository is the host of the project files for the webpage being developed by university students, for a gym they go to.
