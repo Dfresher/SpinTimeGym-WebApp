@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
+import { Menu, Modal, Form, Button, Input, DatePicker } from "antd";
+import type { MenuProps, FormInstance } from "antd";
 import {
   UserAddOutlined,
   HomeOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import type { MenuProps, FormInstance } from "antd";
-import { Menu, Modal, Form, Button, Input, DatePicker } from "antd";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -60,11 +60,6 @@ const items: MenuItem[] = [
     label: "Añadir miembro",
     icon: <UserAddOutlined />,
   },
-  {
-    key: "3",
-    label: "Buscar miembro",
-    icon: <SearchOutlined />,
-  },
 ];
 
 // SideMenu component
@@ -80,10 +75,10 @@ const SideMenu: React.FC = () => {
   }, []);
 
   const handleOk = (values: FieldType) => {
-    setOpen(false);
     const newData = [...data, values];
     setData(newData);
     localStorage.setItem("formData", JSON.stringify(newData));
+    setOpen(false);
     form.resetFields();
   };
 

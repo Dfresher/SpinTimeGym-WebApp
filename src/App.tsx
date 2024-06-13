@@ -5,9 +5,9 @@ import "./App.css";
 function App() {
   return (
     <>
-      <SideMenu />{" "}
+      <SideMenu />
       <div className="table-container">
-        <h3>Miembros del gymnasio:</h3>
+        <h3>Miembros del gimnasio:</h3>
         <ClientTable />
       </div>
     </>
