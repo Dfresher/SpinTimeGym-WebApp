@@ -1,27 +1,15 @@
-import { useState } from "react";
-import Navbar from "./components/Navbar";
-import Table from "./components/Table";
-import Modal from "./components/AddMemberModal";
+import SideMenu from "./components/SideMenu";
+import ClientTable from "./components/ClientTable";
 import "./App.css";
 
 function App() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleAddMemberClick = () => {
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };
-
   return (
     <>
-      <Navbar onAddMemberClick={handleAddMemberClick} />
-      <div className="main">
-        <Table />
+      <SideMenu />{" "}
+      <div className="table-container">
+        <h3>Miembros del gymnasio:</h3>
+        <ClientTable />
       </div>
-      {isModalOpen && <Modal closeModal={closeModal} />}
     </>
   );
 }
