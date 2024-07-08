@@ -58,7 +58,7 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, deleteClient }) => {
       <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
         <Input
           ref={searchInput}
-          placeholder={`Escribe un nombre, fecha o estado`}
+          placeholder={`Escribe un nombre o fecha`}
           value={selectedKeys[0]}
           onChange={(e) =>
             setSelectedKeys(e.target.value ? [e.target.value] : [])

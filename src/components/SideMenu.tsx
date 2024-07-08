@@ -47,7 +47,7 @@ const SubmitButton: React.FC<React.PropsWithChildren<SubmitButtonProps>> = ({
 const items: MenuItem[] = [
   {
     key: "0",
-    label: "SpinTime Gym",
+    label: "Spin Time G",
     disabled: true,
   },
   {

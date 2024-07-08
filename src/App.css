@@ -3,15 +3,26 @@
   height: 100vh;
 }
 
-.table-container {
+.login-container {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-left: 440px;
+}
+
+.logo-img {
+  width: 650px;
+  padding-left: 40px;
+}
+
+.table-container {
   margin: 30px;
 }
 
 .modal-button-container {
   display: flex;
-  justify-content: end;
+  justify-content: flex-end;
   margin-top: 30px;
   gap: 8px;
 }
