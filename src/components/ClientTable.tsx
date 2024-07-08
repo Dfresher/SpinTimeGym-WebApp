@@ -11,46 +11,21 @@ import { SearchOutlined } from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
 import dayjs from "dayjs";
 
-interface DataType {
-  key: React.Key;
+interface Client {
+  id: string;
   name: string;
-  paidDate: string;
-  voidDate: string;
-  tags: string[];
+  joinDate: string;
 }
 
-type DataIndex = keyof DataType;
+type ClientIndex = keyof Client;
 
-const ClientTable: React.FC = () => {
-  const [data, setData] = useState<DataType[]>([]);
+interface ClientTableProps {
+  clients: Client[];
+  deleteClient: (id: string) => void;
+}
 
-  useEffect(() => {
-    const storedData = JSON.parse(localStorage.getItem("formData") || "[]");
-    const transformedData = storedData.map((item: any, index: number) => {
-      const paidDate = dayjs(item.joinDate).format("MM/DD/YYYY");
-      const voidDate = dayjs(item.joinDate)
-        .add(1, "month")
-        .format("MM/DD/YYYY");
-      const tags = dayjs().isAfter(voidDate) ? ["Inactivo"] : ["Activo"];
-
-      return {
-        key: index,
-        name: item.name,
-        paidDate,
-        voidDate,
-        tags,
-      };
-    });
-
-    setData(transformedData);
-  }, []);
-
-  const handleDelete = (record: DataType) => {
-    const newData = data.filter((item) => item.key !== record.key);
-    setData(newData);
-    localStorage.setItem("formData", JSON.stringify(newData));
-  };
-
+//Table Component
+const ClientTable: React.FC<ClientTableProps> = ({ clients, deleteClient }) => {
   //Search code
   const [searchText, setSearchText] = useState("");
   const [searchedColumn, setSearchedColumn] = useState("");
@@ -59,7 +34,7 @@ const ClientTable: React.FC = () => {
   const handleSearch = (
     selectedKeys: string[],
     confirm: FilterDropdownProps["confirm"],
-    dataIndex: DataIndex
+    dataIndex: ClientIndex
   ) => {
     confirm();
     setSearchText(selectedKeys[0]);
@@ -72,14 +47,13 @@ const ClientTable: React.FC = () => {
   };
 
   const getColumnSearchProps = (
-    dataIndex: DataIndex
-  ): TableColumnType<DataType> => ({
+    dataIndex: ClientIndex
+  ): TableColumnType<Client> => ({
     filterDropdown: ({
       setSelectedKeys,
       selectedKeys,
       confirm,
       clearFilters,
-      close,
     }) => (
       <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
         <Input
@@ -113,15 +87,6 @@ const ClientTable: React.FC = () => {
           >
             Borrar
           </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => {
-              close();
-            }}
-          >
-            Cerrar
-          </Button>
         </Space>
       </div>
     ),
@@ -151,7 +116,31 @@ const ClientTable: React.FC = () => {
       ),
   });
 
-  const columns: TableColumnsType<DataType> = [
+  const [data, setData] = useState<Client[]>([]);
+
+  useEffect(() => {
+    // Transform data on mount or whenever clients change
+    const transformedData = clients.map((client) => {
+      const paidDate = dayjs(client.joinDate).format("D/MM/YY");
+      const voidDate = dayjs(client.joinDate).add(1, "month").format("D/MM/YY");
+      const tags = dayjs().isAfter(dayjs(client.joinDate).add(1, "month"))
+        ? ["Inactivo"]
+        : ["Activo"];
+
+      return {
+        ...client,
+        key: client.id,
+        paidDate,
+        voidDate,
+        tags,
+      };
+    });
+
+    setData(transformedData);
+  }, [clients]);
+
+  //Actual Table
+  const columns: TableColumnsType<Client> = [
     {
       title: "Nombre",
       dataIndex: "name",
@@ -164,51 +153,42 @@ const ClientTable: React.FC = () => {
       dataIndex: "paidDate",
       key: "paidDate",
       width: 160,
-      ...getColumnSearchProps("paidDate"),
+      ...getColumnSearchProps("joinDate"),
     },
     {
       title: "Expiracion",
       dataIndex: "voidDate",
       key: "voidDate",
       width: 150,
-      ...getColumnSearchProps("voidDate"),
     },
     {
       title: "Estado",
-      key: "tags",
       dataIndex: "tags",
+      key: "tags",
       width: 120,
-
-      render: (_, { tags }) => (
+      render: (tags: string[]) => (
         <>
-          {tags.map((tag) => {
-            let color = tag.length > 5 ? "geekblue" : "green";
-            if (tag === "Inactivo") {
-              color = "volcano";
-            }
-            return (
-              <Tag color={color} key={tag}>
-                {tag.toUpperCase()}
-              </Tag>
-            );
-          })}
+          {tags.map((tag) => (
+            <Tag color={tag === "Inactivo" ? "volcano" : "green"} key={tag}>
+              {tag.toUpperCase()}
+            </Tag>
+          ))}
         </>
       ),
-      ...getColumnSearchProps("tags"),
     },
     {
       title: "Accion",
       key: "action",
       width: 150,
       render: (_, record) => (
-        <Space size="large">
-          <a onClick={() => handleDelete(record)}>Eliminar</a>
+        <Space size="middle">
+          <a onClick={() => deleteClient(record.id)}>Eliminar</a>
         </Space>
       ),
     },
   ];
 
-  const onChange: TableProps<DataType>["onChange"] = (
+  const onChange: TableProps<Client>["onChange"] = (
     pagination,
     filters,
     sorter,

@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { Menu, Modal, Form, Button, Input, DatePicker } from "antd";
 import type { MenuProps, FormInstance } from "antd";
-import {
-  UserAddOutlined,
-  HomeOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { UserAddOutlined, HomeOutlined } from "@ant-design/icons";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -18,6 +14,10 @@ interface FieldType {
 // SubmitButton component
 interface SubmitButtonProps {
   form: FormInstance;
+}
+
+interface SideMenuProps {
+  addClient: (client: { id: string; name: string; joinDate: string }) => void;
 }
 
 const SubmitButton: React.FC<React.PropsWithChildren<SubmitButtonProps>> = ({
@@ -63,21 +63,17 @@ const items: MenuItem[] = [
 ];
 
 // SideMenu component
-const SideMenu: React.FC = () => {
+const SideMenu: React.FC<SideMenuProps> = ({ addClient }) => {
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
-  const [data, setData] = useState<FieldType[]>([]);
-
-  // Read data from local storage on component mount
-  useEffect(() => {
-    const storedData = JSON.parse(localStorage.getItem("formData") || "[]");
-    setData(storedData);
-  }, []);
 
   const handleOk = (values: FieldType) => {
-    const newData = [...data, values];
-    setData(newData);
-    localStorage.setItem("formData", JSON.stringify(newData));
+    const newClient = {
+      id: Date.now().toString(),
+      name: values.name!,
+      joinDate: values.joinDate!.toString(),
+    };
+    addClient(newClient);
     setOpen(false);
     form.resetFields();
   };
@@ -90,8 +86,6 @@ const SideMenu: React.FC = () => {
   const onClick: MenuProps["onClick"] = (e) => {
     if (e.key === "2") {
       setOpen(true);
-    } else if (e.key === "3") {
-      console.log("findUser pressed");
     }
   };
 
