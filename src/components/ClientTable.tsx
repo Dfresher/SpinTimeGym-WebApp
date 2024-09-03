@@ -1,32 +1,31 @@
 import { useRef, useEffect, useState } from "react";
-import { Table, Tag, Space, Button, Input } from "antd";
-import type {
-  TableColumnsType,
-  TableProps,
-  InputRef,
-  TableColumnType,
-} from "antd";
+import { Table, Tag, Space, Button, Input, Modal, message } from "antd";
+import type { TableColumnsType, TableProps, InputRef, TableColumnType } from "antd";
 import type { FilterDropdownProps } from "antd/es/table/interface";
 import { SearchOutlined } from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
 import dayjs from "dayjs";
-
-interface Client {
-  id: string;
-  name: string;
-  joinDate: string;
-}
+import { Client } from "./types";
 
 type ClientIndex = keyof Client;
 
 interface ClientTableProps {
   clients: Client[];
   deleteClient: (id: string) => void;
+  handlePayment: (clientId: string, amount: number) => void;
+  handleCheckIn: (clientId: string) => void;
+  handleCheckOut: (clientId: string) => void;
 }
 
-//Table Component
-const ClientTable: React.FC<ClientTableProps> = ({ clients, deleteClient }) => {
-  //Search code
+// Table Component
+const ClientTable: React.FC<ClientTableProps> = ({
+  clients,
+  deleteClient,
+  handlePayment,
+  handleCheckIn,
+  handleCheckOut,
+}) => {
+  // Search code
   const [searchText, setSearchText] = useState("");
   const [searchedColumn, setSearchedColumn] = useState("");
   const searchInput = useRef<InputRef>(null);
@@ -58,7 +57,7 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, deleteClient }) => {
       <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
         <Input
           ref={searchInput}
-          placeholder={`Escribe un nombre o fecha`}
+          placeholder={`Search ${dataIndex}`}
           value={selectedKeys[0]}
           onChange={(e) =>
             setSelectedKeys(e.target.value ? [e.target.value] : [])
@@ -94,7 +93,7 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, deleteClient }) => {
       <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
     ),
     onFilter: (value, record) =>
-      record[dataIndex]
+      record[dataIndex] ? record[dataIndex]!.toString().toLowerCase().includes((value as string).toLowerCase()) : false
         .toString()
         .toLowerCase()
         .includes((value as string).toLowerCase()),
@@ -117,15 +116,17 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, deleteClient }) => {
   });
 
   const [data, setData] = useState<Client[]>([]);
+  const [amount, setAmount] = useState<number>(0);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   useEffect(() => {
     // Transform data on mount or whenever clients change
     const transformedData = clients.map((client) => {
-      const paidDate = dayjs(client.joinDate).format("D/MM/YY");
-      const voidDate = dayjs(client.joinDate).add(1, "month").format("D/MM/YY");
-      const tags = dayjs().isAfter(dayjs(client.joinDate).add(1, "month"))
-        ? ["Inactivo"]
-        : ["Activo"];
+      const paidDate = dayjs(client.lastPaymentDate).format("DD/MM/YY");
+      const voidDate = dayjs(client.lastPaymentDate).add(1, "month").format("DD/MM/YY");
+      const tags = dayjs().isAfter(dayjs(client.lastPaymentDate).add(1, "month"))
+        ? ["Inactive"]
+        : ["Active"];
 
       return {
         ...client,
@@ -139,37 +140,114 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, deleteClient }) => {
     setData(transformedData);
   }, [clients]);
 
-  //Actual Table
+  const handlePaymentClick = (clientId: string) => {
+    setSelectedClientId(clientId);
+    setAmount(0);
+
+    let isAmountValid = false;
+
+    const validateAmount = (amount: number) => {
+        isAmountValid = amount >= 0 && amount <= 15;
+    };
+
+    const paymentModal = Modal.confirm({
+        title: 'Make a Payment',
+        content: (
+            <div>
+                <Input
+                    type="number"
+                    min={0}
+                    max={15}
+                    onChange={(e) => {
+                        const value = Number(e.target.value);
+                        setAmount(value);
+                        validateAmount(value);
+                        paymentModal.update({
+                            okButtonProps: { disabled: !isAmountValid },
+                        });
+                    }}
+                    placeholder="Enter payment amount"
+                />
+            </div>
+        ),
+        okButtonProps: { disabled: true },
+        onOk: async () => {
+            if (selectedClientId) {
+                try {
+                    await handlePayment(selectedClientId, amount);
+                    message.success('Payment processed successfully');
+                } catch (error) {
+                    message.error('Payment failed. Please try again.');
+                }
+            }
+        },
+    });
+};
+
+
+  const handleCheckInClick = (clientId: string) => {
+    handleCheckIn(clientId);
+    message.success('Checked in successfully');
+  };
+
+  const handleCheckOutClick = (clientId: string) => {
+    handleCheckOut(clientId);
+    message.success('Checked out successfully');
+  };
+
+  // Actual Table
   const columns: TableColumnsType<Client> = [
     {
-      title: "Nombre",
+      title: "Name",
       dataIndex: "name",
       key: "name",
       width: 250,
       ...getColumnSearchProps("name"),
     },
     {
-      title: "Pago",
+      title: "Attendance",
+      key: "attendance",
+      width: 200,
+      render: (_, record) => (
+        <Space size="middle">
+          <Button
+            type="primary"
+            onClick={() => handleCheckInClick(record.id)}
+            disabled={record.isCheckedIn}
+          >
+            Check-in
+          </Button>
+          <Button
+            type="primary"
+            onClick={() => handleCheckOutClick(record.id)}
+            disabled={!record.isCheckedIn}
+          >
+            Check-out
+          </Button>
+        </Space>
+      ),
+    },
+    {
+      title: "Last Payment Date",
       dataIndex: "paidDate",
       key: "paidDate",
       width: 160,
-      ...getColumnSearchProps("joinDate"),
     },
     {
-      title: "Expiracion",
+      title: "Expiration",
       dataIndex: "voidDate",
       key: "voidDate",
       width: 150,
     },
     {
-      title: "Estado",
+      title: "Status",
       dataIndex: "tags",
       key: "tags",
       width: 120,
       render: (tags: string[]) => (
         <>
           {tags.map((tag) => (
-            <Tag color={tag === "Inactivo" ? "volcano" : "green"} key={tag}>
+            <Tag color={tag === "Inactive" ? "volcano" : "green"} key={tag}>
               {tag.toUpperCase()}
             </Tag>
           ))}
@@ -177,12 +255,20 @@ const ClientTable: React.FC<ClientTableProps> = ({ clients, deleteClient }) => {
       ),
     },
     {
-      title: "Accion",
+      title: "Action",
       key: "action",
       width: 150,
       render: (_, record) => (
         <Space size="middle">
-          <a onClick={() => deleteClient(record.id)}>Eliminar</a>
+          <Button
+            type="primary"
+            onClick={() => handlePaymentClick(record.id)}
+          >
+            Pay
+          </Button>
+          <Button danger onClick={() => deleteClient(record.id)}>
+            Delete
+          </Button>
         </Space>
       ),
     },

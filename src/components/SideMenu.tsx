@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import { Menu, Modal, Form, Button, Input, DatePicker } from "antd";
 import type { MenuProps, FormInstance } from "antd";
 import { UserAddOutlined, HomeOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
 // Form field type
 interface FieldType {
   name?: string;
-  joinDate?: string;
+  joinDate?: dayjs.Dayjs;
+  lastPaymentDate?: dayjs.Dayjs;
 }
 
 // SubmitButton component
@@ -17,7 +19,7 @@ interface SubmitButtonProps {
 }
 
 interface SideMenuProps {
-  addClient: (client: { id: string; name: string; joinDate: string }) => void;
+  addClient: (client: { id: string; name: string; joinDate: string; lastPaymentDate: string; isCheckedIn: boolean; }) => void;
 }
 
 const SubmitButton: React.FC<React.PropsWithChildren<SubmitButtonProps>> = ({
@@ -71,7 +73,9 @@ const SideMenu: React.FC<SideMenuProps> = ({ addClient }) => {
     const newClient = {
       id: Date.now().toString(),
       name: values.name!,
-      joinDate: values.joinDate!.toString(),
+      joinDate: values.joinDate ? values.joinDate.format("YYYY-MM-DD") : "",
+      lastPaymentDate: values.joinDate ? values.joinDate.format("YYYY-MM-DD") : "",
+      isCheckedIn: false,
     };
     addClient(newClient);
     setOpen(false);
@@ -124,12 +128,12 @@ const SideMenu: React.FC<SideMenuProps> = ({ addClient }) => {
             <Input />
           </Form.Item>
           <Form.Item<FieldType>
-            label="Inscripcion:"
+            label="Inscripción:"
             name="joinDate"
             validateDebounce={1000}
             rules={[{ required: true, message: "Fecha requerida!" }]}
           >
-            <DatePicker />
+            <DatePicker format="YYYY-MM-DD" />
           </Form.Item>
           <div className="modal-button-container">
             <Button key="cancel" htmlType="reset" onClick={handleCancel}>
@@ -144,3 +148,4 @@ const SideMenu: React.FC<SideMenuProps> = ({ addClient }) => {
 };
 
 export default SideMenu;
+
