@@ -32,7 +32,6 @@ const Dashboard: React.FC = () => {
 
   const handlePayment = async (clientId: string, amount: number) => {
     try {
-      console.log("its trying"+amount);
       const response = await fetch(`http://localhost:3001/clients/${clientId}/payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -43,7 +42,6 @@ const Dashboard: React.FC = () => {
         const clientsResponse = await fetch("http://localhost:3001/clients");
         const updatedClients = await clientsResponse.json();
         setClients(updatedClients);
-        console.log("it got here adn its being passed");
       } else {
         const errorData = await response.json();
         console.error('Payment failed:', errorData.error);

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { Table, Tag, Space, Button, Input, Modal, message } from "antd";
+import { Table, Tag, Space, Button, Input, Modal, Form, message } from "antd";
 import type { TableColumnsType, TableProps, InputRef, TableColumnType } from "antd";
 import type { FilterDropdownProps } from "antd/es/table/interface";
 import { SearchOutlined } from "@ant-design/icons";
@@ -17,7 +17,6 @@ interface ClientTableProps {
   handleCheckOut: (clientId: string) => void;
 }
 
-// Table Component
 const ClientTable: React.FC<ClientTableProps> = ({
   clients,
   deleteClient,
@@ -77,14 +76,14 @@ const ClientTable: React.FC<ClientTableProps> = ({
             size="small"
             style={{ width: 90 }}
           >
-            Buscar
+            Search
           </Button>
           <Button
             onClick={() => clearFilters && handleReset(clearFilters)}
             size="small"
             style={{ width: 90 }}
           >
-            Borrar
+            Reset
           </Button>
         </Space>
       </div>
@@ -93,10 +92,12 @@ const ClientTable: React.FC<ClientTableProps> = ({
       <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
     ),
     onFilter: (value, record) =>
-      record[dataIndex] ? record[dataIndex]!.toString().toLowerCase().includes((value as string).toLowerCase()) : false
-        .toString()
-        .toLowerCase()
-        .includes((value as string).toLowerCase()),
+      record[dataIndex]
+        ? record[dataIndex]!
+            .toString()
+            .toLowerCase()
+            .includes((value as string).toLowerCase())
+        : false,
     onFilterDropdownOpenChange: (visible) => {
       if (visible) {
         setTimeout(() => searchInput.current?.select(), 100);
@@ -115,12 +116,13 @@ const ClientTable: React.FC<ClientTableProps> = ({
       ),
   });
 
+  // Client management state
   const [data, setData] = useState<Client[]>([]);
   const [amount, setAmount] = useState<number>(0);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
 
   useEffect(() => {
-    // Transform data on mount or whenever clients change
     const transformedData = clients.map((client) => {
       const paidDate = dayjs(client.lastPaymentDate).format("DD/MM/YY");
       const voidDate = dayjs(client.lastPaymentDate).add(1, "month").format("DD/MM/YY");
@@ -143,47 +145,27 @@ const ClientTable: React.FC<ClientTableProps> = ({
   const handlePaymentClick = (clientId: string) => {
     setSelectedClientId(clientId);
     setAmount(0);
+    setIsModalVisible(true);
+  };
 
-    let isAmountValid = false;
+  const handleModalOk = async () => {
+    if (amount >= 0 && amount <= 15 && selectedClientId) {
+      try {
+        await handlePayment(selectedClientId, amount);
+        message.success('Payment successfully processed!');
+      } catch {
+        message.error('Payment failed. Please try again.');
+      }
+      setIsModalVisible(false);
+    } else {
+      message.error('Please enter a valid payment amount.');
+    }
+  };
 
-    const validateAmount = (amount: number) => {
-        isAmountValid = amount >= 0 && amount <= 15;
-    };
-
-    const paymentModal = Modal.confirm({
-        title: 'Make a Payment',
-        content: (
-            <div>
-                <Input
-                    type="number"
-                    min={0}
-                    max={15}
-                    onChange={(e) => {
-                        const value = Number(e.target.value);
-                        setAmount(value);
-                        validateAmount(value);
-                        paymentModal.update({
-                            okButtonProps: { disabled: !isAmountValid },
-                        });
-                    }}
-                    placeholder="Enter payment amount"
-                />
-            </div>
-        ),
-        okButtonProps: { disabled: true },
-        onOk: async () => {
-            if (selectedClientId) {
-                try {
-                    await handlePayment(selectedClientId, amount);
-                    message.success('Payment processed successfully');
-                } catch (error) {
-                    message.error('Payment failed. Please try again.');
-                }
-            }
-        },
-    });
-};
-
+  const handleModalCancel = () => {
+    setIsModalVisible(false);
+    setAmount(0);
+  };
 
   const handleCheckInClick = (clientId: string) => {
     handleCheckIn(clientId);
@@ -195,7 +177,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
     message.success('Checked out successfully');
   };
 
-  // Actual Table
+  // Table columns
   const columns: TableColumnsType<Client> = [
     {
       title: "Name",
@@ -260,10 +242,7 @@ const ClientTable: React.FC<ClientTableProps> = ({
       width: 150,
       render: (_, record) => (
         <Space size="middle">
-          <Button
-            type="primary"
-            onClick={() => handlePaymentClick(record.id)}
-          >
+          <Button type="primary" onClick={() => handlePaymentClick(record.id)}>
             Pay
           </Button>
           <Button danger onClick={() => deleteClient(record.id)}>
@@ -284,7 +263,36 @@ const ClientTable: React.FC<ClientTableProps> = ({
   };
 
   return (
-    <Table columns={columns} dataSource={data} onChange={onChange} bordered />
+    <>
+      <Table columns={columns} dataSource={data} onChange={onChange} bordered />
+
+      {/* Modal for Payment */}
+      <Modal
+        title="Make a Payment"
+        open={isModalVisible}
+        onOk={handleModalOk}
+        onCancel={handleModalCancel}
+        okText="Submit Payment"
+        okButtonProps={{ disabled: amount < 0 || amount > 15 }}
+      >
+        <Form layout="vertical">
+          <Form.Item
+            label="Payment Amount"
+            validateStatus={amount <= 15 ? "success" : "error"}
+            help={amount <= 15 ? "" : "Amount must be at least 15"}
+          >
+            <Input
+              type="number"
+              min={0}
+              max={15}
+              placeholder="Enter payment amount"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value) || 0)}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
   );
 };
 

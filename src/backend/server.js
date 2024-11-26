@@ -1,15 +1,15 @@
-import express from 'express';
-import cors from 'cors';
-import sqlite3 from 'sqlite3';
-import { v4 as uuidv4 } from 'uuid';
-import dayjs from 'dayjs';
+import express from "express";
+import cors from "cors";
+import { v4 as uuidv4 } from "uuid";
+import sqlite3 from "sqlite3";
+import dayjs from "dayjs";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-const db = new sqlite3.Database('./database.sqlite');
+const db = new sqlite3.Database("./database.sqlite");
 db.serialize(() => {
   db.run("PRAGMA foreign_keys = ON");
 
@@ -48,7 +48,7 @@ db.serialize(() => {
 });
 
 // Get all clients
-app.get('/clients', (req, res) => {
+app.get("/clients", (req, res) => {
   db.all("SELECT * FROM clients", [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -58,53 +58,71 @@ app.get('/clients', (req, res) => {
 });
 
 // Add a new client
-app.post('/clients', (req, res) => {
+app.post("/clients", (req, res) => {
   const { name, joinDate, lastPaymentDate } = req.body;
   const id = uuidv4();
-  db.run(`INSERT INTO clients (id, name, joinDate, lastPaymentDate) VALUES (?, ?, ?, ?)`, [id, name, joinDate, lastPaymentDate], function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
+  db.run(
+    `INSERT INTO clients (id, name, joinDate, lastPaymentDate) VALUES (?, ?, ?, ?)`,
+    [id, name, joinDate, lastPaymentDate],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res
+        .status(201)
+        .json({ id, name, joinDate, lastPaymentDate, isCheckedIn: false });
     }
-    res.status(201).json({ id, name, joinDate, lastPaymentDate, isCheckedIn: false });
-  });
+  );
 });
 
 // Handle payments
-app.post('/clients/:id/payment', (req, res) => {
+app.post("/clients/:id/payment", (req, res) => {
   const clientId = req.params.id;
   const { amount } = req.body;
   const paymentDate = dayjs().format();
   const paymentId = uuidv4();
 
-  db.serialize(() => {
-    db.run(
-      `INSERT INTO payments (id, clientId, paymentDate, amount) VALUES (?, ?, ?, ?)`,
-      [paymentId, clientId, paymentDate, amount],
-      function(err) {
-        if (err) {
-          return res.status(500).json({ error: err.message });
-        }
+  console.log("Client ID:", clientId);
 
-        db.run(
-          `UPDATE clients SET lastPaymentDate = ? WHERE id = ?`,
-          [paymentDate, clientId],
-          function(updateErr) {
-            if (updateErr) {
-              return res.status(500).json({ error: updateErr.message });
-            }
-            res.status(200).json({ paymentId, clientId, paymentDate, amount });
-          }
-        );
+  db.serialize(() => {
+    db.get(`SELECT id FROM clients WHERE id = ?`, [clientId], (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
       }
-    );
+
+      if (!row) {
+        return res.status(400).json({ error: "Client does not exist" });
+      }
+      db.run(
+        `INSERT INTO payments (id, clientId, paymentDate, amount) VALUES (?, ?, ?, ?)`,
+        [paymentId, clientId, paymentDate, amount],
+        function (err) {
+          if (err) {
+            return res.status(500).json({ error: err.message });
+          }
+
+          db.run(
+            `UPDATE clients SET lastPaymentDate = ? WHERE id = ?`,
+            [paymentDate, clientId],
+            function (updateErr) {
+              if (updateErr) {
+                return res.status(500).json({ error: updateErr.message });
+              }
+              res
+                .status(200)
+                .json({ paymentId, clientId, paymentDate, amount });
+            }
+          );
+        }
+      );
+    });
   });
 });
 
-
 // Delete a client
-app.delete('/clients/:id', (req, res) => {
+app.delete("/clients/:id", (req, res) => {
   const id = req.params.id;
-  db.run(`DELETE FROM clients WHERE id = ?`, id, function(err) {
+  db.run(`DELETE FROM clients WHERE id = ?`, id, function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -113,7 +131,7 @@ app.delete('/clients/:id', (req, res) => {
 });
 
 // Mark client check-in
-app.post('/attendance/checkin', (req, res) => {
+app.post("/attendance/checkin", (req, res) => {
   const { clientId } = req.body;
   const id = uuidv4();
   const checkInTime = dayjs().format();
@@ -121,7 +139,7 @@ app.post('/attendance/checkin', (req, res) => {
   db.run(
     `INSERT INTO attendance (id, clientId, checkInTime) VALUES (?, ?, ?)`,
     [id, clientId, checkInTime],
-    function(err) {
+    function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
@@ -129,7 +147,7 @@ app.post('/attendance/checkin', (req, res) => {
       db.run(
         `UPDATE clients SET isCheckedIn = TRUE WHERE id = ?`,
         clientId,
-        function(updateErr) {
+        function (updateErr) {
           if (updateErr) {
             return res.status(500).json({ error: updateErr.message });
           }
@@ -141,14 +159,14 @@ app.post('/attendance/checkin', (req, res) => {
 });
 
 // Mark client check-out
-app.post('/attendance/checkout', (req, res) => {
+app.post("/attendance/checkout", (req, res) => {
   const { clientId } = req.body;
   const checkOutTime = dayjs().format();
 
   db.run(
     `UPDATE attendance SET checkOutTime = ? WHERE clientId = ? AND checkOutTime IS NULL`,
     [checkOutTime, clientId],
-    function(err) {
+    function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
@@ -156,7 +174,7 @@ app.post('/attendance/checkout', (req, res) => {
       db.run(
         `UPDATE clients SET isCheckedIn = FALSE WHERE id = ?`,
         clientId,
-        function(updateErr) {
+        function (updateErr) {
           if (updateErr) {
             return res.status(500).json({ error: updateErr.message });
           }
@@ -168,7 +186,7 @@ app.post('/attendance/checkout', (req, res) => {
 });
 
 // Get attendance records
-app.get('/attendance', (req, res) => {
+app.get("/attendance", (req, res) => {
   db.all("SELECT * FROM attendance", [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -178,5 +196,5 @@ app.get('/attendance', (req, res) => {
 });
 
 app.listen(3001, () => {
-  console.log('Server is running on port 3001');
+  console.log("Server is running on port 3001");
 });
